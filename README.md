@@ -13,6 +13,41 @@ A Django REST API application to parse, store, and serve weather data from the U
 
 The project is organized into several directories and files:
 
+weather-api/
+├── api/
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── management/
+│   │   ├── __init__.py
+│   │   └── commands/
+│   │       ├── __init__.py
+│   │       └── fetch_weather_data.py
+│   ├── migrations/
+│   ├── models.py
+│   ├── serializers.py
+│   ├── tests.py
+│   ├── urls.py
+│   └── views.py
+├── core/
+│   ├── __init__.py
+│   ├── asgi.py
+│   ├── exceptions.py
+│   ├── settings.py
+│   ├── settings_prod.py
+│   ├── urls.py
+│   └── wsgi.py
+├── utils/
+│   ├── __init__.py
+│   ├── data_fetcher.py
+│   └── parsers.py
+├── .gitignore
+├── Dockerfile
+├── README.md
+├── docker-compose.yml
+├── manage.py
+└── requirements.txt
+
 - **api/**: Contains the main application logic, including models, views, serializers, and URL routing.
 - **core/**: Contains the core Django project settings and entry points for ASGI and WSGI.
 - **api/management/**: Contains custom Django management commands for fetching and parsing weather data.
@@ -22,8 +57,8 @@ The project is organized into several directories and files:
 - **Dockerfile**: Instructions for building a Docker image for the application.
 - **docker-compose.yml**: Defines services for running the application in Docker.
 
-## Setup
 
+## Setup
 ### Requirements
 
 - Python 3.8+ (mine is 3.11.9)
