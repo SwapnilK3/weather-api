@@ -1,31 +1,18 @@
 version: '3'
 
 services:
-  db:
-    image: postgres:13
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    environment:
-      - POSTGRES_DB=weather_db
-      - POSTGRES_USER=weather_user
-      - POSTGRES_PASSWORD=weather_password
-    ports:
-      - "5432:5432"
-
   web:
     build: .
     command: >
       sh -c "python manage.py migrate &&
-             gunicorn --bind 0.0.0.0:8000 core.wsgi:application"
+             python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
+      - sqlite_data:/app/db.sqlite3  # Persist SQLite database
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgres://weather_user:weather_password@db:5432/weather_db
       - DJANGO_SECRET_KEY=dev_secret_key_change_in_production
-    depends_on:
-      - db
 
 volumes:
-  postgres_data:
+  sqlite_data:
