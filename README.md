@@ -122,16 +122,74 @@ The following endpoints are available for managing data sources:
 
 ## Running with Docker
 
+### Prerequisites
+- Docker installed on your machine
+- Docker Compose installed (included with Docker Desktop for Windows/Mac)
+
+### Build and Run
+
 1. **Build the Docker image**:
-   it will be edited tomorrow
-   <!-- ```
-   docker build -t weather-api . data sources   docker build -t weather-api .   ``` /api/sources/get_regions/` - Get available regions -->
+```
+docker build -t weather-api .
+```
+
 
 
 2. **Run the application using Docker Compose**:
-   <!-- ```
-   docker-compose upocker Compose: docker-compose up   ``` docker-compose up -->
-   
+  ``` 
+  docker run -p 8000:8000 weather-api
+  ```
+
+
+3. **Using Docker Compose**:
+
+Create a `docker-compose.yml` file with the following contents:
+```yaml
+version: '3'
+
+services:
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=weather_db
+      - POSTGRES_USER=weather_user
+      - POSTGRES_PASSWORD=weather_password
+    ports:
+      - "5432:5432"
+
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=1
+      - DJANGO_SECRET_KEY=dev_key_change_in_production
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
+
+```
+Then run:
+
+```
+docker-compose up
+```
+
+Or in detached mode:
+```
+docker-compose up -d
+```
+
+## Accessing the API
+Once running in Docker, the API will be available at http://127.0.0.1:8000/api/
+
 ## Testing
 this also will be updated tomorrow
 <!-- To run the tests, use the following command::
