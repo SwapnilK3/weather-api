@@ -1,0 +1,62 @@
+{% extends "api/base.html" %}
+{% load static %}
+
+{% block title %}Available Regions - Weather API{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Available Regions</h1>
+        
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-map-marker-alt me-2"></i>Regions
+            </div>
+            <div class="card-body">
+                {% if regions %}
+                    <div class="row">
+                        {% for region in regions %}
+                            <div class="col-md-3 col-sm-6 mb-3">
+                                <div class="card weather-card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ region }}</h5>
+                                        <p class="card-text text-muted">
+                                            <small>Region code: <strong>{{ region }}</strong></small>
+                                        </p>
+                                        <a href="{% url 'api:weatherdata-list' %}?region={{ region }}" class="btn btn-sm btn-view-details">
+                                            View Data
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="no-data">
+                        <i class="fas fa-map fa-3x mb-3"></i>
+                        <h4>No regions available</h4>
+                        <p class="text-muted">Try adding data sources first</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-code me-2"></i>API Endpoint
+            </div>
+            <div class="card-body">
+                <p>You can access this data programmatically using the following endpoint:</p>
+                <pre><code>GET /api/source/get_regions/</code></pre>
+                <p>Example response:</p>
+                <pre><code>[
+    "UK",
+    "England",
+    "Wales",
+    "Scotland"
+]</code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

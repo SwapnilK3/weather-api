@@ -1,0 +1,219 @@
+{% extends "api/base.html" %}
+{% load static %}
+
+{% block title %}Add Data Source - Weather API{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 col-md-10 mx-auto">
+        <h1 class="mb-4">Add New Data Source</h1>
+        
+        <div class="card">
+            {%if messages%}
+                {%for message in messages%}
+                    <div class="alert alert-{{message.tags}} alert-dismissible fade show" role="alert">
+                        {{message}}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {%endfor%}
+            {%endif%}
+            <div class="card-header">
+                <i class="fas fa-plus me-2"></i>New Data Source
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'api:datasource-add-source' %}">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="region" class="form-label">Region</label>
+                        <select class="form-select" id="region" name="region" required>
+                            {% for region in regions %}
+                                <option value="{{ region }}">{{ region }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Select the region to fetch data for</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="parameter" class="form-label">Weather Parameter</label>
+                        <select class="form-select" id="parameter" name="parameter" required>
+                            {% for param in parameters %}
+                                <option value="{{ param }}">{{ param }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            <ul class="mt-2">
+                                <li><strong>Tmax</strong> - Maximum temperature (°C)</li>
+                                <li><strong>Tmin</strong> - Minimum temperature (°C)</li>
+                                <li><strong>Tmean</strong> - Mean temperature (°C)</li>
+                                <li><strong>Rainfall</strong> - Rainfall (mm)</li>
+                                <li><strong>Sunshine</strong> - Sunshine (hours)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="order" class="form-label">Order Type</label>
+                        <select class="form-select" id="order" name="order" required>
+                            {% for order_option in order_options %}
+                                <option value="{{ order_option }}">{{ order_option|title }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            <ul class="mt-2">
+                                <li><strong>Date</strong> - Data ordered chronologically</li>
+                                <li><strong>Ranked</strong> - Data ordered by value (highest to lowest)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 bg-light p-3 rounded">
+                        <p class="mb-2"><strong>URL Preview:</strong></p>
+                        <code id="url-preview">https://www.metoffice.gov.uk/pub/data/weather/uk/climate/datasets/Tmax/date/UK.txt</code>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'api:datasource-list' %}" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-cloud-download-alt me-2"></i>Fetch Data
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Weather Data Section -->
+<div class="row mt-5">
+    <div class="col-12">
+        <h2 class="mb-4">Recent Weather Data</h2>
+        
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-table me-2"></i>Latest 100 Records
+                </div>
+                <div class="d-flex">
+                    <div class="dropdown me-2">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="regionFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            Region: {{ selected_region|default:"All" }}
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="regionFilterDropdown">
+                            <li><a class="dropdown-item" href="?">All Regions</a></li>
+                            {% for region in available_regions %}
+                                <li><a class="dropdown-item" href="?region={{ region }}">{{ region }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="paramFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            Parameter: {{ selected_parameter|default:"All" }}
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="paramFilterDropdown">
+                            <li><a class="dropdown-item" href="?">All Parameters</a></li>
+                            {% for param in available_parameters %}
+                                <li><a class="dropdown-item" href="?parameter={{ param }}">{{ param }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                {% if weather_data %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Region</th>
+                                    <th>Parameter</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in weather_data %}
+                                    <tr>
+                                        <td>{{ item.year }}-{% if item.month < 10 %}0{% endif %}{{ item.month }}</td>
+                                        <td>{{ item.source.region }}</td>
+                                        <td>{{ item.source.parameter }}</td>
+                                        <td>
+                                            <span class="fw-bold">{{ item.value }}</span>
+                                            {% if item.source.parameter == 'Tmax' or item.source.parameter == 'Tmin' or item.source.parameter == 'Tmean' %}°C{% endif %}
+                                            {% if item.source.parameter == 'Rainfall' %}mm{% endif %}
+                                            {% if item.source.parameter == 'Sunshine' %}hrs{% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {% if is_paginated %}
+                    <nav aria-label="Weather data pagination">
+                        <ul class="pagination justify-content-center mt-4">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1">&laquo; First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                            </li>
+                            {% endif %}
+                            
+                            <li class="page-item active">
+                                <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                            </li>
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                
+                {% else %}
+                    <div class="no-data text-center py-5">
+                        <i class="fas fa-cloud-rain fa-3x mb-3 text-muted"></i>
+                        <h4>No weather data available</h4>
+                        <p class="text-muted">Use the form above to fetch weather data</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Update URL preview when form values change
+    document.addEventListener('DOMContentLoaded', function() {
+        const regionSelect = document.getElementById('region');
+        const parameterSelect = document.getElementById('parameter');
+        const orderSelect = document.getElementById('order');
+        const urlPreview = document.getElementById('url-preview');
+        
+        function updateUrlPreview() {
+            const region = regionSelect.value;
+            const parameter = parameterSelect.value;
+            const order = orderSelect.value;
+            
+            urlPreview.textContent = `https://www.metoffice.gov.uk/pub/data/weather/uk/climate/datasets/${parameter}/${order}/${region}.txt`;
+        }
+        
+        regionSelect.addEventListener('change', updateUrlPreview);
+        parameterSelect.addEventListener('change', updateUrlPreview);
+        orderSelect.addEventListener('change', updateUrlPreview);
+        
+        // Initialize preview
+        updateUrlPreview();
+    });
+</script>
+{% endblock %}
+{% endblock %}

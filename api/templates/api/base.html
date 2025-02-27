@@ -1,0 +1,262 @@
+{% load static %} <!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Weather API Dashboard{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        --primary-color: #3498db;
+        --secondary-color: #2c3e50;
+        --accent-color: #e74c3c;
+        --light-bg: #f8f9fa;
+        --dark-bg: #343a40;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        padding-top: 60px;
+        background-color: #f5f7fa;
+      }
+
+      /* Navbar styling */
+      .navbar {
+        background-color: var(--secondary-color);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+
+      .navbar-brand {
+        font-weight: 700;
+        color: white !important;
+      }
+
+      .nav-link {
+        color: rgba(255, 255, 255, 0.85) !important;
+        font-weight: 500;
+        transition: all 0.3s;
+      }
+
+      .nav-link:hover {
+        color: white !important;
+        transform: translateY(-2px);
+      }
+
+      .nav-link.active {
+        color: white !important;
+        border-bottom: 2px solid var(--primary-color);
+      }
+
+      /* Card styling */
+      .card {
+        border-radius: 8px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        margin-bottom: 20px;
+        border: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+      }
+
+      .card-header {
+        background-color: var(--secondary-color);
+        color: white;
+        font-weight: 600;
+        border: none;
+      }
+
+      .card-body {
+        padding: 1.5rem;
+      }
+
+      /* Data source cards */
+      .data-source-card {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      .data-source-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .data-source-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+      }
+
+      .data-source-meta {
+        margin-top: 15px;
+      }
+
+      .meta-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        color: #6c757d;
+      }
+
+      .meta-item i {
+        margin-right: 10px;
+        width: 16px;
+        color: var(--primary-color);
+      }
+
+      /* Weather data cards */
+      .weather-card {
+        background-color: white;
+        border-left: 4px solid var(--primary-color);
+      }
+
+      .weather-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--secondary-color);
+      }
+
+      /* Button styling */
+      .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+      }
+
+      .btn-primary:hover {
+        background-color: #2980b9;
+        border-color: #2980b9;
+      }
+
+      .btn-view-details {
+        background-color: white;
+        color: var(--primary-color);
+        border: 1px solid var(--primary-color);
+        transition: all 0.3s;
+      }
+
+      .btn-view-details:hover {
+        background-color: var(--primary-color);
+        color: white;
+      }
+
+      /* Footer */
+      footer {
+        background-color: var(--secondary-color);
+        color: white;
+        padding: 20px 0;
+        margin-top: 50px;
+      }
+
+      /* Container for page content */
+      .content-container {
+        padding: 30px 15px;
+      }
+
+      /* No data placeholder */
+      .no-data {
+        text-align: center;
+        padding: 40px 0;
+      }
+
+      .no-data i {
+        color: #dee2e6;
+        margin-bottom: 15px;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        body {
+          padding-top: 56px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+      <div class="container">
+        <a class="navbar-brand" href="{% url 'api:home' %}">
+          <i class="fas fa-cloud-sun me-2"></i>Weather API
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
+                href="{% url 'api:home' %}">
+                <i class="fas fa-home me-1"></i> Home
+              </a>
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link {% if 'weather' in request.path %}active{% endif %}"
+                href="{% url 'api:weatherdata-list' %}"
+              >
+                <i class="fas fa-temperature-high me-1"></i> Weather Data
+              </a>
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link {% if 'source' in request.path %}active{% endif %}"
+                href="{% url 'api:datasource-list' %}"
+              >
+                <i class="fas fa-database me-1"></i> Data Sources
+              </a>
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link {% if 'docs' in request.path %}active{% endif %}"
+                href="{% url 'api:docs' %}"
+              >
+                <i class="fas fa-book me-1"></i> API Docs
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    {% block extra_css %}{% endblock %}
+
+    <!-- Main Content -->
+    <div class="content-container container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container text-center">
+            <p>&copy; {% now "Y" %} UK MetOffice Weather API. It is assesment of an Interview. If you want to hire me as a freelancer contact me on swapnilkale226@gmail.com.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

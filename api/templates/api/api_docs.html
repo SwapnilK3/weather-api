@@ -1,0 +1,480 @@
+{% extends "api/base.html" %}
+{% load static %}
+
+{% block title %}API Documentation - Weather API{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Weather API Documentation</h1>
+
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            This documentation describes the endpoints available in the UK MetOffice Weather API and how to use them.
+        </div>
+
+        <!-- Table of Contents -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Contents</h5>
+            </div>
+            <div class="card-body bg-dark">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#overview">1. Overview</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#authentication">2. Authentication</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#weather-data">3. Weather Data Endpoints</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#data-sources">4. Data Source Endpoints</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#error-codes">5. Error Codes</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#examples">6. Examples</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Overview Section -->
+        <div class="card mb-4" id="overview">
+            <div class="card-header">
+                <h2 class="mb-0">1. Overview</h2>
+            </div>
+            <div class="card-body">
+                <p>
+                    The UK MetOffice Weather API provides access to historical weather data across various regions of the United Kingdom.
+                    The API allows you to:
+                </p>
+                <ul>
+                    <li>Query weather data by region, parameter, and date</li>
+                    <li>Add new data sources from the UK MetOffice</li>
+                    <li>Get information about available regions and parameters</li>
+                </ul>
+                
+                <h4>Base URL</h4>
+                <div class="bg-light p-2 rounded">
+                    <code>http://127.0.0.1:8000/api/</code>
+                </div>
+                
+                <h4>API Versioning</h4>
+                <p>
+                    This is version 1.0 of the API. Currently, versioning is not included in the URL.
+                </p>
+                
+                <h4>Response Format</h4>
+                <p>
+                    All responses are returned in JSON format by default. HTML responses are available for browser-based access.
+                </p>
+            </div>
+        </div>
+
+        <!-- Authentication Section -->
+        <div class="card mb-4" id="authentication">
+            <div class="card-header">
+                <h2 class="mb-0">2. Authentication</h2>
+            </div>
+            <div class="card-body">
+                <p>
+                    Currently, the API does not require authentication for access. This may change in future versions.
+                </p>
+            </div>
+        </div>
+
+<!-- Weather Data Section -->
+<div class="card mb-4" id="weather-data">
+    <div class="card-header">
+        <h2 class="mb-0">3. Weather Data Endpoints</h2>
+    </div>
+    <div class="card-body">
+        <div class="endpoint mb-4">
+            <h4>List Weather Data</h4>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-success me-2">GET</span>
+                <code>/api/weather/</code>
+            </div>
+            <p class="mt-2">
+                Returns a paginated list of weather data records (100 per page). Supports filtering by various parameters.
+            </p>
+            
+            <h5>Query Parameters</h5>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>region</td>
+                        <td>string</td>
+                        <td>Filter by region (e.g., UK, England, Wales)</td>
+                    </tr>
+                    <tr>
+                        <td>parameter</td>
+                        <td>string</td>
+                        <td>Filter by parameter (e.g., Tmax, Tmin, Rainfall)</td>
+                    </tr>
+                    <tr>
+                        <td>year</td>
+                        <td>integer</td>
+                        <td>Filter by year</td>
+                    </tr>
+                    <tr>
+                        <td>month</td>
+                        <td>integer</td>
+                        <td>Filter by month (1-12)</td>
+                    </tr>
+                    <tr>
+                        <td>page</td>
+                        <td>integer</td>
+                        <td>Page number for pagination (100 records per page)</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h5>Example Response</h5>
+            <pre class="bg-light p-3 rounded"><code>{
+  "count": 120,
+  "next": "http://127.0.0.1:8000/api/weather/?page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "year": 2022,
+      "month": 5,
+      "value": 18.5,
+      "source": {
+        "id": 1,
+        "region": "UK",
+        "parameter": "Tmax",
+        "order_statistic": "date",
+        "last_updated": "2023-05-15T14:30:45Z"
+      }
+    },
+    // More items...
+  ]
+}</code></pre>
+        </div>
+        
+        <div class="endpoint">
+            <h4>Fetch Weather Data from MetOffice</h4>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-primary me-2">POST</span>
+                <code>/api/weather/fetch_data/</code>
+            </div>
+            <p class="mt-2">
+                Fetches weather data from the MetOffice API and stores it in the database.
+            </p>
+            
+            <h5>Request Body</h5>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>region</td>
+                        <td>string</td>
+                        <td>Region to fetch data for (e.g., UK, England)</td>
+                    </tr>
+                    <tr>
+                        <td>parameter</td>
+                        <td>string</td>
+                        <td>Parameter to fetch (e.g., Tmax, Rainfall)</td>
+                    </tr>
+                    <tr>
+                        <td>order</td>
+                        <td>string</td>
+                        <td>Order type (date, ranked)</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h5>Example Request</h5>
+            <pre class="bg-light p-3 rounded"><code>{
+  "region": "UK",
+  "parameter": "Tmax",
+  "order": "date"
+}</code></pre>
+        </div>
+    </div>
+</div>
+
+        <!-- Data Sources Section -->
+        <div class="card mb-4" id="data-sources">
+            <div class="card-header">
+                <h2 class="mb-0">4. Data Source Endpoints</h2>
+            </div>
+            <div class="card-body">
+                <div class="endpoint mb-4">
+                    <h4>List Data Sources</h4>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-success me-2">GET</span>
+                        <code>/api/source/</code>
+                    </div>
+                    <p class="mt-2">
+                        Returns a list of all data sources.
+                    </p>
+                    
+                    <h5>Query Parameters</h5>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>region</td>
+                                <td>string</td>
+                                <td>Filter by region</td>
+                            </tr>
+                            <tr>
+                                <td>parameter</td>
+                                <td>string</td>
+                                <td>Filter by parameter</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="endpoint mb-4">
+                    <h4>Get Available Regions</h4>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-success me-2">GET</span>
+                        <code>/api/source/get_regions/</code>
+                    </div>
+                    <p class="mt-2">
+                        Returns a list of all available regions.
+                    </p>
+                    
+                    <h5>Example Response</h5>
+                    <pre class="bg-light p-3 rounded"><code>[
+  "UK",
+  "England",
+  "Wales",
+  "Scotland"
+]</code></pre>
+                </div>
+                
+                <div class="endpoint">
+                    <h4>Add New Data Source</h4>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-primary me-2">POST</span>
+                        <code>/api/source/add_source/</code>
+                    </div>
+                    <p class="mt-2">
+                        Adds a new data source and fetches its data from the MetOffice.
+                    </p>
+                    
+                    <h5>Request Body</h5>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>region</td>
+                                <td>string</td>
+                                <td>Region identifier (e.g., UK, England)</td>
+                            </tr>
+                            <tr>
+                                <td>parameter</td>
+                                <td>string</td>
+                                <td>Parameter type (e.g., Tmax, Rainfall)</td>
+                            </tr>
+                            <tr>
+                                <td>order</td>
+                                <td>string</td>
+                                <td>Order type (date, ranked)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="mt-3">
+                        <h5>Available Regions</h5>
+                        <ul class="list-unstyled row">
+                            <li class="col-md-4">UK</li>
+                            <li class="col-md-4">England</li>
+                            <li class="col-md-4">Wales</li>
+                            <li class="col-md-4">Scotland</li>
+                            <li class="col-md-4">Northern_Ireland</li>
+                            <li class="col-md-4">England_and_Wales</li>
+                            <li class="col-md-4">England_N</li>
+                            <li class="col-md-4">England_S</li>
+                            <li class="col-md-4">England_E</li>
+                            <li class="col-md-4">England_W</li>
+                            <li class="col-md-4">Scotland_N</li>
+                            <li class="col-md-4">Scotland_E</li>
+                            <li class="col-md-4">Scotland_W</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h5>Available Parameters</h5>
+                        <ul class="list-unstyled row">
+                            <li class="col-md-4">Tmax - Maximum temperature (°C)</li>
+                            <li class="col-md-4">Tmin - Minimum temperature (°C)</li>
+                            <li class="col-md-4">Tmean - Mean temperature (°C)</li>
+                            <li class="col-md-4">Rainfall - Rainfall (mm)</li>
+                            <li class="col-md-4">Sunshine - Sunshine (hours)</li>
+                            <li class="col-md-4">Airfrost - Days of air frost</li>
+                            <li class="col-md-4">Raindays1mm - Days of rain ≥ 1mm</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Codes Section -->
+        <div class="card mb-4" id="error-codes">
+            <div class="card-header">
+                <h2 class="mb-0">5. Error Codes</h2>
+            </div>
+            <div class="card-body">
+                <p>The API uses standard HTTP status codes to indicate the success or failure of a request.</p>
+                
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Status Code</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>200 OK</td>
+                            <td>Request was successful</td>
+                        </tr>
+                        <tr>
+                            <td>201 Created</td>
+                            <td>Resource was successfully created</td>
+                        </tr>
+                        <tr>
+                            <td>400 Bad Request</td>
+                            <td>Invalid request parameters</td>
+                        </tr>
+                        <tr>
+                            <td>404 Not Found</td>
+                            <td>The requested resource was not found</td>
+                        </tr>
+                        <tr>
+                            <td>500 Internal Server Error</td>
+                            <td>An error occurred on the server</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h4 class="mt-4">Error Response Format</h4>
+                <pre class="bg-light p-3 rounded"><code>{
+  "error": "Error type",
+  "detail": "Detailed error message"
+}</code></pre>
+            </div>
+        </div>
+
+        <!-- Examples Section -->
+        <div class="card mb-4" id="examples">
+    <div class="card-header">
+        <h2 class="mb-0">6. Examples</h2>
+    </div>
+    <div class="card-body">
+        <h4>Example 1: Get Temperature Data for UK in 2022</h4>
+        
+        <h5>Request</h5>
+        <pre class="bg-light p-3 rounded"><code>curl -X GET "http://127.0.0.1:8000/api/weather/?region=UK&parameter=Tmax&year=2022"</code></pre>
+        
+        <h5>Response</h5>
+        <pre class="bg-light p-3 rounded"><code>{
+  "count": 12,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "year": 2022,
+      "month": 1,
+      "value": 7.5,
+      "source": {
+        "id": 1,
+        "region": "UK",
+        "parameter": "Tmax",
+        "order_statistic": "date",
+        "last_updated": "2023-05-15T14:30:45Z"
+      }
+    },
+    // More items...
+  ]
+}</code></pre>
+
+        <h4 class="mt-4">Example 2: Get All Regions</h4>
+        
+        <h5>Request</h5>
+        <pre class="bg-light p-3 rounded"><code>curl -X GET "http://127.0.0.1:8000/api/source/get_regions/"</code></pre>
+        
+        <h5>Response</h5>
+        <pre class="bg-light p-3 rounded"><code>[
+  "UK",
+  "England",
+  "Wales",
+  "Scotland",
+  "Northern_Ireland"
+]</code></pre>
+
+        <h4 class="mt-4">Example 3: Add a New Data Source</h4>
+        
+        <h5>Request</h5>
+        <pre class="bg-light p-3 rounded"><code>curl -X POST "http://127.0.0.1:8000/api/source/add_source/" \
+-H "Content-Type: application/json" \
+-d '{
+  "region": "Wales",
+  "parameter": "Rainfall",
+  "order": "date"
+}'</code></pre>
+        
+        <h5>Response</h5>
+        <pre class="bg-light p-3 rounded"><code>{
+  "message": "Successfully processed data. Added 123 new records.",
+  "region": "Wales",
+  "parameter": "Rainfall",
+  "source_id": 5
+}</code></pre>
+
+        <h4 class="mt-4">Example 4: Paginated Results</h4>
+        
+        <h5>Request</h5>
+        <pre class="bg-light p-3 rounded"><code>curl -X GET "http://127.0.0.1:8000/api/weather/?page=2"</code></pre>
+        
+        <h5>Response</h5>
+        <pre class="bg-light p-3 rounded"><code>{
+  "count": 350,
+  "next": "http://127.0.0.1:8000/api/weather/?page=3",
+  "previous": "http://127.0.0.1:8000/api/weather/?page=1",
+  "results": [
+    // 100 weather records (page 2)
+  ]
+}</code></pre>
+    </div>
+</div>
+    </div>
+</div>
+{% endblock %}
