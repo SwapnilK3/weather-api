@@ -8,6 +8,8 @@ router = DefaultRouter()
 router.register(r'weather', WeatherDataViewSet, basename='weatherdata')
 router.register(r'source', DataSourceViewSet, basename='datasource')
 
+for url in router.urls:
+    print(url.name, url.pattern)
 
 urlpatterns = [
     path('', HomeView.as_view(), name='home'),

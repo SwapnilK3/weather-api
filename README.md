@@ -9,6 +9,8 @@ A Django REST API application to parse, store, and serve weather data from the U
 - Provides a RESTful API to access the data
 - Supports filtering by region, parameter, year, month, etc.
 - Modern UI for data visualization and interaction
+- Interactive data visualizations with multiple chart types
+- Support for comparing regions, parameters, and time periods
 - Pagination with 100 records per page
 
 ## Project Structure
@@ -124,10 +126,43 @@ The application includes a modern, responsive web interface for interacting with
 
 - **Dashboard** (/api/): Overview with statistics and recent data
 - **Weather Data** (/api/weather/): View and filter weather data with pagination
+- **Weather Visualization** (/api/weather/visualize/): Interactive charts and visualizations
 - **Data Sources** (/api/source/): Manage and view data sources
 - **Add Data Source** (/api/source/add_source/): Form to add new data sources
 - **Regions** (/api/source/get_regions/): View available regions
 - **API Documentation** (/api/docs/): Interactive API documentation
+
+## Visualization Features
+
+The application includes comprehensive data visualization capabilities:
+
+### Chart Types
+
+- **Time Series**: View monthly data trends across multiple years
+- **Regional Comparison**: Compare weather data across different UK regions
+- **Parameter Comparison**: Compare different parameters (temperature, rainfall, etc.) for a region
+- **Seasonal Analysis**: Analyze seasonal patterns with radar charts
+- **Annual Trends**: Observe long-term trends with moving averages and trend lines
+- **Regional Heatmap**: Visualize geographic distributions with color-coded heatmaps
+
+### Filtering Options
+
+The visualization interface supports multiple filtering options:
+
+- **Region**: Select specific UK regions or view all regions
+- **Parameter**: Choose from available weather parameters (Tmax, Tmin, Rainfall, etc.)
+- **Year**: Select a specific year for detailed analysis
+- **Year Range**: Specify start and end years for long-term analysis
+
+### Visualization Features
+
+- Interactive charts with tooltips and legends
+- Responsive design for desktop and mobile devices
+- Parameter-specific color schemes (blue-red for temperature, blue for rainfall, etc.)
+- Statistical summaries and extreme value detection
+- Trend analysis with moving averages and regression lines
+- Seasonal pattern detection and comparison
+- Automatic unit selection based on parameter type (°C, mm, hours, etc.)
 
 ## Running with Docker
 
@@ -214,6 +249,7 @@ The README now accurately reflects the current state of your project including t
 
 ## Demo Video
 
-https://github.com/assementfarmastura/weather-api/assets/demo-video.mp4
+<video controls src="https://github.com/SwapnilK3/weather-api/blob/main/demo.mp4" title="https://github.com/SwapnilK3/weather-api/blob/main/demo.mp4"></video>
 
 [View Demo Video](https://github.com/SwapnilK3/weather-api/blob/main/demo.mp4)
+

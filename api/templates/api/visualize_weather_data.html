@@ -1,0 +1,1027 @@
+{% extends "api/base.html" %}
+{% load static %}
+
+{% block title %}Weather Data Visualization{% endblock %}
+
+{% block extra_head %}
+<script src="{% static 'js/chart.min.js' %}"></script>
+<style>
+  .chart-container {
+    position: relative;
+    height: 400px;
+    margin-bottom: 30px;
+  }
+  .filter-card {
+    position: sticky;
+    top: 20px;
+    z-index: 100;
+  }
+  .view-selector .btn {
+    margin-right: 5px;
+    margin-bottom: 5px;
+  }
+  .stat-card {
+    transition: all 0.3s ease;
+  }
+  .stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  }
+  .heatmap-cell {
+    transition: all 0.2s;
+  }
+  .heatmap-cell:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    z-index: 10;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <h1 class="mb-4">Weather Data Visualization</h1>
+  
+  <!-- Filters -->
+  <div class="card mb-4 filter-card">
+    <div class="card-header bg-primary text-white">
+      <i class="fas fa-filter me-2"></i>Data Filters
+    </div>
+    <div class="card-body">
+      <form method="GET" class="row g-3">
+        <div class="col-md-3">
+          <label for="region" class="form-label">Region</label>
+          <select class="form-select" id="region" name="region">
+            <option value="all">All Regions</option>
+            {% for region in regions %}
+            <option value="{{ region }}" {% if selected_region == region %}selected{% endif %}>{{ region }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="parameter" class="form-label">Parameter</label>
+          <select class="form-select" id="parameter" name="parameter">
+            <option value="all">All Parameters</option>
+            {% for param in parameters %}
+            <option value="{{ param }}" {% if selected_parameter == param %}selected{% endif %}>{{ param }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="year" class="form-label">Year</label>
+          <select class="form-select" id="year" name="year">
+            <option value="all">All Years</option>
+            {% for year in years %}
+            <option value="{{ year }}" {% if selected_year == year|stringformat:"i" %}selected{% endif %}>{{ year }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="fas fa-search me-2"></i>Update Visualizations
+          </button>
+        </div>
+        <input type="hidden" name="view" id="viewType" value="{{ view_type }}">
+      </form>
+    </div>
+  </div>
+  
+  <!-- View Type Selector -->
+  <div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+      <i class="fas fa-chart-area me-2"></i>Visualization Type
+    </div>
+    <div class="card-body view-selector">
+      <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-primary {% if view_type == 'time-series' %}active{% endif %}" 
+                onclick="changeView('time-series')">
+          <i class="fas fa-chart-line me-1"></i>Time Series
+        </button>
+        <button type="button" class="btn btn-outline-primary {% if view_type == 'comparison' %}active{% endif %}" 
+                onclick="changeView('comparison')">
+          <i class="fas fa-chart-bar me-1"></i>Regional Comparison
+        </button>
+        <button type="button" class="btn btn-outline-primary {% if view_type == 'parameters' %}active{% endif %}" 
+                onclick="changeView('parameters')">
+          <i class="fas fa-chart-radar me-1"></i>Parameter Comparison
+        </button>
+        <button type="button" class="btn btn-outline-primary {% if view_type == 'seasonal' %}active{% endif %}" 
+                onclick="changeView('seasonal')">
+          <i class="fas fa-sun me-1"></i>Seasonal Analysis
+        </button>
+        <button type="button" class="btn btn-outline-primary {% if view_type == 'trends' %}active{% endif %}" 
+                onclick="changeView('trends')">
+          <i class="fas fa-chart-area me-1"></i>Annual Trends
+        </button>
+        <button type="button" class="btn btn-outline-primary {% if view_type == 'heatmap' %}active{% endif %}" 
+                onclick="changeView('heatmap')">
+          <i class="fas fa-th me-1"></i>Regional Heatmap
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Summary Statistics -->
+  <div class="row mb-4">
+    {% if extremes_data %}
+    <div class="col-md-4 mb-3">
+      <div class="card stat-card h-100 bg-gradient bg-light">
+        <div class="card-body">
+          <h5 class="card-title">Maximum {{ selected_parameter }}</h5>
+          <h2 class="display-4 text-danger">
+            {{ extremes_data.max.value|floatformat:1 }}
+            {% if selected_parameter == "Tmax" or selected_parameter == "Tmin" or selected_parameter == "Tmean" %}°C{% endif %}
+            {% if selected_parameter == "Rainfall" %}mm{% endif %}
+            {% if selected_parameter == "Sunshine" %}hrs{% endif %}
+          </h2>
+          <p class="text-muted">
+            {{ extremes_data.max.region }}, 
+            {{ extremes_data.max.month }}/{{ extremes_data.max.year }}
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 mb-3">
+      <div class="card stat-card h-100 bg-gradient bg-light">
+        <div class="card-body">
+          <h5 class="card-title">Minimum {{ selected_parameter }}</h5>
+          <h2 class="display-4 text-primary">
+            {{ extremes_data.min.value|floatformat:1 }}
+            {% if selected_parameter == "Tmax" or selected_parameter == "Tmin" or selected_parameter == "Tmean" %}°C{% endif %}
+            {% if selected_parameter == "Rainfall" %}mm{% endif %}
+            {% if selected_parameter == "Sunshine" %}hrs{% endif %}
+          </h2>
+          <p class="text-muted">
+            {{ extremes_data.min.region }}, 
+            {{ extremes_data.min.month }}/{{ extremes_data.min.year }}
+          </p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    <div class="col-md-4 mb-3">
+      <div class="card stat-card h-100 bg-gradient bg-light">
+        <div class="card-body">
+          <h5 class="card-title">Data Overview</h5>
+          <div class="row mb-2">
+            <div class="col-7">Region:</div>
+            <div class="col-5 fw-bold">{{ selected_region }}</div>
+          </div>
+          <div class="row mb-2">
+            <div class="col-7">Parameter:</div>
+            <div class="col-5 fw-bold">{{ selected_parameter }}</div>
+          </div>
+          <div class="row">
+            <div class="col-7">Time Period:</div>
+            <div class="col-5 fw-bold">
+              {% if selected_year and selected_year != 'all' %}
+                {{ selected_year }}
+              {% else %}
+                Last 5 Years
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Time Series Visualization View -->
+  <div id="timeSeries" class="visualization-view" {% if view_type != 'time-series' %}style="display:none;"{% endif %}>
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-chart-line me-2"></i>
+        {% if selected_year and selected_year != 'all' %}
+          Monthly {{ selected_parameter }} for {{ selected_region }} ({{ selected_year }})
+        {% else %}
+          Monthly {{ selected_parameter }} for {{ selected_region }} (Last 5 Years)
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="timeSeriesChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Region Comparison View -->
+  <div id="regionComparison" class="visualization-view" {% if view_type != 'comparison' %}style="display:none;"{% endif %}>
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-chart-bar me-2"></i>Regional Comparison ({{ selected_parameter }})
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="regionComparisonChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Parameter Comparison View -->
+  <div id="parameterComparison" class="visualization-view" {% if view_type != 'parameters' %}style="display:none;"{% endif %}>
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-chart-radar me-2"></i>Parameter Comparison for {{ selected_region }}
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="parameterComparisonChart"></canvas>
+        </div>
+        <div class="alert alert-info mt-3">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Note:</strong> Values are normalized as percentage of maximum to allow comparison across different units.
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Seasonal Analysis View -->
+  <div id="seasonalAnalysis" class="visualization-view" {% if view_type != 'seasonal' %}style="display:none;"{% endif %}>
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-sun me-2"></i>Seasonal Patterns ({{ selected_parameter }})
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="seasonalAnalysisChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Annual Trends View -->
+  <div id="annualTrends" class="visualization-view" {% if view_type != 'trends' %}style="display:none;"{% endif %}>
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-chart-area me-2"></i>Annual Averages and Trends
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="annualTrendsChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Regional Heatmap View -->
+  <div id="regionalHeatmap" class="visualization-view" {% if view_type != 'heatmap' %}style="display:none;"{% endif %}>
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-th me-2"></i>Regional Heatmap ({{ selected_parameter }})
+      </div>
+      <div class="card-body">
+        <div id="heatmapContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Debug Information -->
+  <div class="card mb-4 d-none">
+    <div class="card-header bg-secondary text-white">
+      <i class="fas fa-bug me-2"></i>Debug Information
+    </div>
+    <div class="card-body">
+      <div id="debugInfo"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Store data in script tags for JavaScript to access -->
+{{ chart_data|json_script:"timeSeriesData" }}
+{{ region_comparison_data|json_script:"regionComparisonData" }}
+{{ parameter_comparison_data|json_script:"parameterComparisonData" }}
+{{ annual_data|json_script:"annualData" }}
+{{ seasons_data|json_script:"seasonsData" }}
+{{ heatmap_data|json_script:"heatmapData" }}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+      try {
+        // Check if Chart.js is loaded
+        if (typeof Chart === 'undefined') {
+          throw new Error("Chart.js is not loaded!");
+        }
+        
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        
+        // Get data from script tags
+        const timeSeriesData = JSON.parse(document.getElementById('timeSeriesData').textContent);
+        const regionComparisonData = JSON.parse(document.getElementById('regionComparisonData').textContent);
+        const parameterComparisonData = JSON.parse(document.getElementById('parameterComparisonData').textContent);
+        const annualData = JSON.parse(document.getElementById('annualData').textContent);
+        const seasonsData = JSON.parse(document.getElementById('seasonsData').textContent);
+        const heatmapData = JSON.parse(document.getElementById('heatmapData').textContent);
+        
+        // Add debug info
+        document.getElementById('debugInfo').innerHTML = `
+          <p>Time series data: ${timeSeriesData.length} points</p>
+          <p>Region comparison data: ${regionComparisonData.length} points</p>
+          <p>Parameter comparison data: ${parameterComparisonData.length} points</p>
+          <p>Annual data: ${annualData.length} points</p>
+          <p>Seasons data: ${seasonsData.length} points</p>
+          <p>Heatmap data: ${heatmapData.length} points</p>
+        `;
+        
+        // Helper function to get unit suffix
+        function getUnitSuffix() {
+          const parameter = '{{ selected_parameter }}';
+          if (parameter.startsWith('T')) {
+            return ' °C';
+          } else if (parameter === 'Rainfall') {
+            return ' mm';
+          } else if (parameter === 'Sunshine') {
+            return ' hrs';
+          } else if (parameter === 'Airfrost') {
+            return ' days';
+          } else if (parameter === 'Raindays1mm') {
+            return ' days';
+          }
+          return '';
+        }
+        
+        // Initialize charts based on current view
+        initCharts();
+        
+        // Function to change view
+        window.changeView = function(viewType) {
+          document.getElementById('viewType').value = viewType;
+          
+          // Hide all views
+          const views = document.querySelectorAll('.visualization-view');
+          views.forEach(view => view.style.display = 'none');
+          
+          // Show selected view
+          document.getElementById(viewTypeToElementId(viewType)).style.display = 'block';
+          
+          // Update active button
+          const buttons = document.querySelectorAll('.view-selector .btn');
+          buttons.forEach(button => button.classList.remove('active'));
+          document.querySelector(`.view-selector .btn[onclick="changeView('${viewType}')"]`).classList.add('active');
+        };
+        
+        // Helper function to convert view type to element id
+        function viewTypeToElementId(viewType) {
+          switch (viewType) {
+            case 'time-series': return 'timeSeries';
+            case 'comparison': return 'regionComparison';
+            case 'parameters': return 'parameterComparison';
+            case 'seasonal': return 'seasonalAnalysis';
+            case 'trends': return 'annualTrends';
+            case 'heatmap': return 'regionalHeatmap';
+            default: return 'timeSeries';
+          }
+        }
+        
+        // Initialize all charts
+        function initCharts() {
+          createTimeSeriesChart();
+          createRegionComparisonChart();
+          createParameterComparisonChart();
+          createSeasonalAnalysisChart();
+          createAnnualTrendsChart();
+          createHeatmap();
+        }
+        
+        // Function to create time series chart
+        function createTimeSeriesChart() {
+          const timeSeriesCtx = document.getElementById('timeSeriesChart');
+          if (!timeSeriesCtx) return;
+          
+          // Group time series data by year
+          const yearGroups = {};
+          for (const item of timeSeriesData) {
+            const year = item.year;
+            const month = parseInt(item.month);
+            const value = parseFloat(item.value);
+            
+            if (!yearGroups[year]) {
+              yearGroups[year] = Array(12).fill(null);
+            }
+            
+            if (month >= 1 && month <= 12) {
+              yearGroups[year][month-1] = value;
+            }
+          }
+          
+          // Create datasets for time series
+          const timeSeriesDatasets = [];
+          const colors = [
+            'rgb(54, 162, 235)',   // blue
+            'rgb(255, 99, 132)',   // red
+            'rgb(75, 192, 192)',   // teal
+            'rgb(255, 159, 64)',   // orange
+            'rgb(153, 102, 255)'   // purple
+          ];
+          
+          // Sort years in descending order
+          const years = Object.keys(yearGroups).sort((a, b) => b - a);
+          
+          for (let i = 0; i < years.length; i++) {
+            const year = years[i];
+            timeSeriesDatasets.push({
+              label: year,
+              data: yearGroups[year],
+              borderColor: colors[i % colors.length],
+              backgroundColor: colors[i % colors.length].replace('rgb', 'rgba').replace(')', ', 0.2)'),
+              tension: 0.1,
+              fill: '{{ selected_year }}' !== 'all',
+              pointRadius: 4
+            });
+          }
+          
+          new Chart(timeSeriesCtx, {
+            type: 'line',
+            data: {
+              labels: months,
+              datasets: timeSeriesDatasets
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'top',
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return context.dataset.label + ': ' + context.parsed.y + getUnitSuffix();
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  title: {
+                    display: true,
+                    text: '{{ selected_parameter }}' + getUnitSuffix()
+                  },
+                  beginAtZero: false
+                },
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Month'
+                  }
+                }
+              }
+            }
+          });
+        }
+        
+        // Function to create region comparison chart
+        function createRegionComparisonChart() {
+          const regionCompCtx = document.getElementById('regionComparisonChart');
+          if (!regionCompCtx || regionComparisonData.length === 0) return;
+          
+          // Group region comparison data by region
+          const regionGroups = {};
+          for (const item of regionComparisonData) {
+            const region = item.source__region;
+            const month = parseInt(item.month);
+            const value = parseFloat(item.value);
+            
+            if (!regionGroups[region]) {
+              regionGroups[region] = Array(12).fill(null);
+            }
+            
+            if (month >= 1 && month <= 12) {
+              regionGroups[region][month-1] = value;
+            }
+          }
+          
+          // Create datasets for region comparison
+          const regionDatasets = [];
+          const colors = [
+            'rgb(54, 162, 235)',   // blue
+            'rgb(255, 99, 132)',   // red
+            'rgb(75, 192, 192)',   // teal
+            'rgb(255, 159, 64)',   // orange
+            'rgb(153, 102, 255)',  // purple
+            'rgb(255, 205, 86)',   // yellow
+            'rgb(201, 203, 207)',  // gray
+            'rgb(255, 99, 71)',    // tomato
+            'rgb(50, 205, 50)',    // lime
+            'rgb(138, 43, 226)'    // violet
+          ];
+          
+          // Sort regions alphabetically
+          const regions = Object.keys(regionGroups).sort();
+          
+          for (let i = 0; i < regions.length; i++) {
+            const region = regions[i];
+            regionDatasets.push({
+              label: region,
+              data: regionGroups[region],
+              backgroundColor: colors[i % colors.length].replace('rgb', 'rgba').replace(')', ', 0.7)'),
+              borderColor: colors[i % colors.length],
+              borderWidth: 1
+            });
+          }
+          
+          new Chart(regionCompCtx, {
+            type: 'bar',
+            data: {
+              labels: months,
+              datasets: regionDatasets
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'top',
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return context.dataset.label + ': ' + context.parsed.y + getUnitSuffix();
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  title: {
+                    display: true,
+                    text: '{{ selected_parameter }}' + getUnitSuffix()
+                  },
+                  beginAtZero: false
+                },
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Month'
+                  }
+                }
+              }
+            }
+          });
+        }
+        
+        // Function to create parameter comparison chart
+        function createParameterComparisonChart() {
+          const paramCompCtx = document.getElementById('parameterComparisonChart');
+          if (!paramCompCtx || parameterComparisonData.length === 0) return;
+          
+          // Group parameter comparison data by parameter
+          const paramGroups = {};
+          const parameters = new Set();
+          
+          for (const item of parameterComparisonData) {
+            const parameter = item.source__parameter;
+            parameters.add(parameter);
+            
+            if (!paramGroups[parameter]) {
+              paramGroups[parameter] = Array(12).fill(null);
+            }
+            
+            const month = parseInt(item.month);
+            const value = parseFloat(item.value);
+            
+            if (month >= 1 && month <= 12) {
+              paramGroups[parameter][month-1] = value;
+            }
+          }
+          
+          // Normalize the values since parameters have different units
+          const normalizedGroups = {};
+          for (const parameter of parameters) {
+            const values = paramGroups[parameter];
+            const validValues = values.filter(v => v !== null);
+            if (validValues.length === 0) continue;
+            
+            const max = Math.max(...validValues);
+            
+            normalizedGroups[parameter] = values.map(v => v !== null ? (v / max * 100) : null);
+          }
+          
+          // Create datasets
+          const paramDatasets = [];
+          const colors = [
+            'rgb(54, 162, 235)',   // blue
+            'rgb(255, 99, 132)',   // red
+            'rgb(75, 192, 192)',   // teal
+            'rgb(255, 159, 64)',   // orange
+            'rgb(153, 102, 255)'   // purple
+          ];
+          
+          let i = 0;
+          for (const parameter of parameters) {
+            paramDatasets.push({
+              label: parameter,
+              data: normalizedGroups[parameter],
+              borderColor: colors[i % colors.length],
+              backgroundColor: colors[i % colors.length].replace('rgb', 'rgba').replace(')', ', 0.2)'),
+              borderWidth: 2,
+              pointRadius: 3
+            });
+            i++;
+          }
+          
+          new Chart(paramCompCtx, {
+            type: 'radar',
+            data: {
+              labels: months,
+              datasets: paramDatasets
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              elements: {
+                line: {
+                  tension: 0.1
+                }
+              },
+              plugins: {
+                legend: {
+                  position: 'top',
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      // For normalized data, show percentage of maximum
+                      return context.dataset.label + ': ' + context.raw.toFixed(1) + '% of max';
+                    }
+                  }
+                }
+              },
+              scales: {
+                r: {
+                  angleLines: {
+                    display: true
+                  },
+                  suggestedMin: 0,
+                  suggestedMax: 100
+                }
+              }
+            }
+          });
+        }
+        
+        // Function to create seasonal analysis chart
+        function createSeasonalAnalysisChart() {
+          const seasonalCtx = document.getElementById('seasonalAnalysisChart');
+          if (!seasonalCtx || seasonsData.length === 0) return;
+          
+          // Define seasons: Winter (Dec-Feb), Spring (Mar-May), Summer (Jun-Aug), Autumn (Sep-Nov)
+          const seasons = ['Winter', 'Spring', 'Summer', 'Autumn'];
+          const seasonMonths = {
+            'Winter': [12, 1, 2],
+            'Spring': [3, 4, 5],
+            'Summer': [6, 7, 8],
+            'Autumn': [9, 10, 11]
+          };
+          
+          // Group data by year and season
+          const yearSeasonData = {};
+          
+          for (const item of seasonsData) {
+            const year = item.year;
+            const month = parseInt(item.month);
+            const value = parseFloat(item.value);
+            
+            if (!yearSeasonData[year]) {
+              yearSeasonData[year] = {
+                'Winter': [],
+                'Spring': [],
+                'Summer': [],
+                'Autumn': []
+              };
+            }
+            
+            // Assign month data to seasons
+            for (const season in seasonMonths) {
+              if (seasonMonths[season].includes(month)) {
+                yearSeasonData[year][season].push(value);
+                break;
+              }
+            }
+          }
+          
+          // Calculate season averages
+          const seasonAverages = {};
+          for (const year in yearSeasonData) {
+            seasonAverages[year] = {};
+            for (const season in yearSeasonData[year]) {
+              const values = yearSeasonData[year][season];
+              if (values.length > 0) {
+                const sum = values.reduce((a, b) => a + b, 0);
+                seasonAverages[year][season] = sum / values.length;
+              } else {
+                seasonAverages[year][season] = null;
+              }
+            }
+          }
+          
+          // Create datasets for each year
+          const datasets = [];
+          const years = Object.keys(seasonAverages).sort((a, b) => b - a);
+          const colors = [
+            'rgb(54, 162, 235)',   // blue
+            'rgb(255, 99, 132)',   // red
+            'rgb(75, 192, 192)',   // teal
+            'rgb(255, 159, 64)',   // orange
+            'rgb(153, 102, 255)'   // purple
+          ];
+          
+          for (let i = 0; i < years.length; i++) {
+            const year = years[i];
+            const data = [];
+            
+            for (const season of seasons) {
+              data.push(seasonAverages[year][season]);
+            }
+            
+            datasets.push({
+              label: year,
+              data: data,
+              borderColor: colors[i % colors.length],
+              backgroundColor: colors[i % colors.length].replace('rgb', 'rgba').replace(')', ', 0.2)'),
+              borderWidth: 2,
+              fill: true
+            });
+          }
+          
+          new Chart(seasonalCtx, {
+            type: 'radar',
+            data: {
+              labels: seasons,
+              datasets: datasets
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'top',
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return context.dataset.label + ': ' + context.raw.toFixed(1) + getUnitSuffix();
+                    }
+                  }
+                }
+              },
+              scales: {
+                r: {
+                  angleLines: {
+                    display: true
+                  },
+                  beginAtZero: false
+                }
+              }
+            }
+          });
+        }
+        
+        // Function to create annual trends chart
+        function createAnnualTrendsChart() {
+          const annualCtx = document.getElementById('annualTrendsChart');
+          if (!annualCtx || annualData.length === 0) return;
+          
+          // Prepare data
+          const years = [];
+          const values = [];
+          
+          for (const item of annualData) {
+            years.push(item.year);
+            values.push(parseFloat(item.avg_value));
+          }
+          
+          // Calculate 5-year moving average
+          const movingAvgs = [];
+          const movingAvgWindow = Math.min(5, values.length);
+          for (let i = 0; i < values.length; i++) {
+            if (i < movingAvgWindow - 1) {
+              // Not enough prior data points
+              movingAvgs.push(null);
+            } else {
+              // Calculate average of current and previous 4 points
+              let sum = 0;
+              for (let j = 0; j < movingAvgWindow; j++) {
+                sum += values[i - j];
+              }
+              movingAvgs.push(sum / movingAvgWindow);
+            }
+          }
+          
+          // Calculate trend line
+          const xValues = years.map((year, index) => index);
+          const n = xValues.length;
+          
+          // Calculate sums for least squares method
+          let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+          for (let i = 0; i < n; i++) {
+            sumX += xValues[i];
+            sumY += values[i];
+            sumXY += xValues[i] * values[i];
+            sumXX += xValues[i] * xValues[i];
+          }
+          
+          // Calculate slope and intercept
+          const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+          const intercept = (sumY - slope * sumX) / n;
+          
+          // Create trend line data
+          const trendData = xValues.map(x => slope * x + intercept);
+          
+          new Chart(annualCtx, {
+            type: 'line',
+            data: {
+              labels: years,
+              datasets: [
+                {
+                  label: 'Annual Average',
+                  data: values,
+                  borderColor: 'rgb(54, 162, 235)',
+                  backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                  borderWidth: 2,
+                  pointRadius: 3,
+                  fill: true
+                },
+                {
+                  label: '5-Year Moving Average',
+                  data: movingAvgs,
+                  borderColor: 'rgb(255, 99, 132)',
+                  backgroundColor: 'transparent',
+                  borderWidth: 2,
+                  pointRadius: 0,
+                  borderDash: [5, 5],
+                  fill: false
+                },
+                {
+                  label: 'Trend Line',
+                  data: trendData,
+                  borderColor: 'rgb(75, 192, 192)',
+                  backgroundColor: 'transparent',
+                  borderWidth: 2,
+                  pointRadius: 0,
+                  fill: false
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'top',
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + getUnitSuffix();
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  title: {
+                    display: true,
+                    text: 'Average ' + '{{ selected_parameter }}' + getUnitSuffix()
+                  },
+                  beginAtZero: false
+                },
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Year'
+                  }
+                }
+              }
+            }
+          });
+        }
+        
+        // Function to create heatmap visualization
+        function createHeatmap() {
+          const heatmapContainer = document.getElementById('heatmapContainer');
+          if (!heatmapContainer || heatmapData.length === 0) return;
+          
+          // Extract unique regions and years
+          const regions = [...new Set(heatmapData.map(item => item.region))].sort();
+          const years = [...new Set(heatmapData.map(item => item.year))].sort();
+          
+          // Create data array for heatmap
+          const data = [];
+          for (const item of heatmapData) {
+            data.push({
+              x: item.year,
+              y: item.region,
+              value: parseFloat(item.value)
+            });
+          }
+          
+          // Find min and max values
+          let minValue = Math.min(...data.map(item => item.value));
+          let maxValue = Math.max(...data.map(item => item.value));
+          
+          // Create grid layout
+          let gridHTML = '<div style="display: grid; grid-template-columns: auto repeat(' + years.length + ', 1fr); gap: 2px;">';
+          
+          // Create header row with years
+          gridHTML += '<div style="font-weight: bold; text-align: right; padding-right: 10px;">Region</div>';
+          for (const year of years) {
+            gridHTML += '<div style="font-weight: bold; text-align: center;">' + year + '</div>';
+          }
+          
+          // Create rows for each region
+          for (const region of regions) {
+            gridHTML += '<div style="font-weight: bold; text-align: right; padding-right: 10px;">' + region + '</div>';
+            
+            // Add cells for each year
+            for (const year of years) {
+              const item = data.find(d => d.y === region && d.x === year);
+              
+              if (item) {
+                // Calculate color based on value (blue-white-red scale)
+                const normalizedValue = (item.value - minValue) / (maxValue - minValue);
+                let color;
+                
+                // Parameter-specific color schemes
+                if ('{{ selected_parameter }}'.startsWith('T')) {
+                  // Temperature: blue to red
+                  if (normalizedValue < 0.5) {
+                    // Blue to white
+                    const intensity = Math.round(255 * (normalizedValue * 2));
+                    color = 'rgb(' + intensity + ',' + intensity + ',255)';
+                  } else {
+                    // White to red
+                    const intensity = Math.round(255 * (2 - normalizedValue * 2));
+                    color = 'rgb(255,' + intensity + ',' + intensity + ')';
+                  }
+                } else if ('{{ selected_parameter }}' === 'Rainfall') {
+                  // Rainfall: white to blue
+                  const intensity = Math.round(255 * (1 - normalizedValue));
+                  color = 'rgb(' + intensity + ',' + intensity + ',255)';
+                } else {
+                  // Default: white to green
+                  const intensity = Math.round(255 * (1 - normalizedValue));
+                  color = 'rgb(' + intensity + ',255,' + intensity + ')';
+                }
+                
+                gridHTML += '<div class="heatmap-cell" style="background-color: ' + color + 
+                           '; padding: 10px; text-align: center; color: ' + 
+                           (normalizedValue > 0.7 || normalizedValue < 0.3 ? 'white' : 'black') + 
+                           ';" title="' + region + ', ' + year + ': ' + item.value + getUnitSuffix() + '">' + 
+                           item.value.toFixed(1) + '</div>';
+              } else {
+                gridHTML += '<div style="background-color: #eee; padding: 10px; text-align: center;">-</div>';
+              }
+            }
+          }
+          
+          gridHTML += '</div>';
+          
+          // Add color scale
+          gridHTML += '<div class="mt-4">';
+          gridHTML += '<p><strong>Color Scale:</strong></p>';
+          gridHTML += '<div style="display: flex; width: 100%; height: 20px; margin-top: 10px;">';
+          
+          // Create gradient based on parameter
+          if ('{{ selected_parameter }}'.startsWith('T')) {
+            // Temperature: blue to white to red
+            gridHTML += '<div style="flex-grow: 1; background: linear-gradient(to right, blue, white, red);"></div>';
+            gridHTML += '</div>';
+            gridHTML += '<div style="display: flex; justify-content: space-between; width: 100%;">';
+            gridHTML += '<div>' + minValue.toFixed(1) + getUnitSuffix() + '</div>';
+            gridHTML += '<div>' + ((maxValue + minValue) / 2).toFixed(1) + getUnitSuffix() + '</div>';
+            gridHTML += '<div>' + maxValue.toFixed(1) + getUnitSuffix() + '</div>';
+          } else if ('{{ selected_parameter }}' === 'Rainfall') {
+            // Rainfall: white to blue
+            gridHTML += '<div style="flex-grow: 1; background: linear-gradient(to right, white, blue);"></div>';
+            gridHTML += '</div>';
+            gridHTML += '<div style="display: flex; justify-content: space-between; width: 100%;">';
+            gridHTML += '<div>' + minValue.toFixed(1) + getUnitSuffix() + '</div>';
+            gridHTML += '<div>' + maxValue.toFixed(1) + getUnitSuffix() + '</div>';
+          } else {
+            // Default: white to green
+            gridHTML += '<div style="flex-grow: 1; background: linear-gradient(to right, white, green);"></div>';
+            gridHTML += '</div>';
+            gridHTML += '<div style="display: flex; justify-content: space-between; width: 100%;">';
+            gridHTML += '<div>' + minValue.toFixed(1) + getUnitSuffix() + '</div>';
+            gridHTML += '<div>' + maxValue.toFixed(1) + getUnitSuffix() + '</div>';
+          }
+          gridHTML += '</div>';
+          gridHTML += '</div>';
+          
+          // Add the grid to the container
+          heatmapContainer.innerHTML = gridHTML;
+        }
+        
+      } catch (error) {
+        console.error("Error in chart initialization:", error);
+        // Add error message to page
+        const errorElement = document.createElement('div');
+        errorElement.className = 'alert alert-danger mt-3';
+        errorElement.textContent = 'Error initializing charts: ' + error.message;
+        document.querySelector('.container-fluid').prepend(errorElement);
+      }
+    });
+    </script>
+{% endblock %} 

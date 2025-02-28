@@ -1,0 +1,238 @@
+{% extends "api/base.html" %}
+{% load static %}
+
+{% block title %}Weather Data Chart{% endblock %}
+
+{% block extra_head %}
+<script src="{% static 'js/chart.min.js' %}"></script>
+<style>
+  .chart-container {
+    position: relative;
+    height: 400px;
+    margin-bottom: 30px;
+  }
+  .filter-card {
+    position: sticky;
+    top: 20px;
+    z-index: 100;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>Weather Data Visualization</h1>
+  
+  <!-- Main Chart -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5>Temperature Trends by Year</h5>
+    </div>
+    <div class="card-body">
+      <div class="chart-container">
+        <canvas id="testChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Data Card -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5>Data Summary</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-4">
+          <div class="card bg-light">
+            <div class="card-body">
+              <h6 class="card-title">Data Points</h6>
+              <p class="card-text h3" id="dataCount">-</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card bg-light">
+            <div class="card-body">
+              <h6 class="card-title">Years Covered</h6>
+              <p class="card-text h3" id="yearsCount">-</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card bg-light">
+            <div class="card-body">
+              <h6 class="card-title">Chart.js Version</h6>
+              <p class="card-text h3" id="chartVersion">-</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Error messages area -->
+      <div id="errorMessages" class="alert alert-danger mt-3" style="display:none;"></div>
+    </div>
+  </div>
+  
+  <!-- Raw Data View -->
+  <div class="card">
+    <div class="card-header">
+      <h5>Raw Data</h5>
+    </div>
+    <div class="card-body">
+      <pre id="rawData" style="max-height: 300px; overflow-y: auto;" class="bg-light p-3 rounded">Loading data...</pre>
+    </div>
+  </div>
+</div>
+
+{{ chart_data|json_script:"chartDataJson" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Show chart.js version
+  try {
+    document.getElementById('chartVersion').textContent = Chart.version;
+  } catch (e) {
+    showError("Chart.js is not loaded correctly");
+    return;
+  }
+  
+  // Get and parse the chart data
+  try {
+    const chartData = JSON.parse(document.getElementById('chartDataJson').textContent);
+    document.getElementById('rawData').textContent = JSON.stringify(chartData, null, 2);
+    document.getElementById('dataCount').textContent = chartData.length;
+    
+    // Check if we have data
+    if (!chartData || chartData.length === 0) {
+      showError("No data available to visualize");
+      return;
+    }
+    
+    // Process data for the chart
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const yearGroups = {};
+    
+    // Group by year
+    chartData.forEach(item => {
+      if (!item.year || !item.month || item.value === undefined) {
+        console.warn("Invalid data item:", item);
+        return;
+      }
+      
+      const year = item.year;
+      const month = parseInt(item.month);
+      const value = parseFloat(item.value);
+      
+      if (!yearGroups[year]) {
+        yearGroups[year] = Array(12).fill(null);
+      }
+      
+      if (month >= 1 && month <= 12 && !isNaN(value)) {
+        yearGroups[year][month - 1] = value;
+      }
+    });
+    
+    // Count years
+    const years = Object.keys(yearGroups);
+    document.getElementById('yearsCount').textContent = years.length;
+    
+    // Display sorted years (most recent first)
+    const sortedYears = years.sort((a, b) => b - a);
+    
+    // Define colors
+    const colors = [
+      '#3366CC', // blue
+      '#DC3912', // red
+      '#FF9900', // orange
+      '#109618', // green
+      '#990099'  // purple
+    ];
+    
+    // Create datasets
+    const datasets = [];
+    sortedYears.forEach((year, index) => {
+      datasets.push({
+        label: year,
+        data: yearGroups[year],
+        borderColor: colors[index % colors.length],
+        backgroundColor: colors[index % colors.length] + '33', // 20% opacity
+        borderWidth: 2,
+        pointRadius: 4,
+        tension: 0.1,
+        fill: false
+      });
+    });
+    
+    // Create the chart
+    const ctx = document.getElementById('testChart').getContext('2d');
+    
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: months,
+        datasets: datasets
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            position: 'top'
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.dataset.label || '';
+                return label + ': ' + context.parsed.y + '°C';
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Month',
+              font: {
+                weight: 'bold'
+              }
+            },
+            grid: {
+              display: true,
+              color: 'rgba(0, 0, 0, 0.1)'
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Temperature (°C)',
+              font: {
+                weight: 'bold'
+              }
+            },
+            grid: {
+              display: true,
+              color: 'rgba(0, 0, 0, 0.1)'
+            }
+          }
+        }
+      }
+    });
+    
+  } catch (error) {
+    showError("Error processing data: " + error.message);
+    console.error('Chart error details:', error);
+  }
+  
+  function showError(message) {
+    const errorElement = document.getElementById('errorMessages');
+    errorElement.textContent = message;
+    errorElement.style.display = 'block';
+  }
+});
+</script>
+{% endblock %}
