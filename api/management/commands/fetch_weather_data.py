@@ -1,5 +1,3 @@
-import requests
-from datetime import datetime
 from django.core.management.base import BaseCommand
 from api.models import WeatherData, DataSource
 from utils.parsers import get_weather_data

@@ -4,11 +4,11 @@ from rest_framework.decorators import action
 from .models import WeatherData, DataSource
 from .serializers import WeatherDataSerializer, DataSourceSerializer
 from utils.parsers import get_weather_data
-from rest_framework.viewsets import ReadOnlyModelViewSet
+
 from django.shortcuts import render, redirect
 from rest_framework.renderers import TemplateHTMLRenderer, JSONRenderer
 from django.views.generic import TemplateView 
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.contrib import messages
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 

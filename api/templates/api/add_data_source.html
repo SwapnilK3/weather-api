@@ -100,9 +100,9 @@
                             Region: {{ selected_region|default:"All" }}
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="regionFilterDropdown">
-                            <li><a class="dropdown-item" href="?">All Regions</a></li>
+                            <li><a class="dropdown-item" href="?{% if selected_parameter %}parameter={{ selected_parameter }}{% endif %}">All Regions</a></li>
                             {% for region in available_regions %}
-                                <li><a class="dropdown-item" href="?region={{ region }}">{{ region }}</a></li>
+                                <li><a class="dropdown-item" href="?region={{ region }}{% if selected_parameter %}&parameter={{ selected_parameter }}{% endif %}">{{ region }}</a></li>
                             {% endfor %}
                         </ul>
                     </div>
@@ -111,9 +111,9 @@
                             Parameter: {{ selected_parameter|default:"All" }}
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="paramFilterDropdown">
-                            <li><a class="dropdown-item" href="?">All Parameters</a></li>
+                            <li><a class="dropdown-item" href="?{% if selected_region %}region={{ selected_region }}{% endif %}">All Parameters</a></li>
                             {% for param in available_parameters %}
-                                <li><a class="dropdown-item" href="?parameter={{ param }}">{{ param }}</a></li>
+                                <li><a class="dropdown-item" href="?parameter={{ param }}{% if selected_region %}&region={{ selected_region }}{% endif %}">{{ param }}</a></li>
                             {% endfor %}
                         </ul>
                     </div>

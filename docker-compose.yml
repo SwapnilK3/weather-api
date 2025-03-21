@@ -11,5 +11,6 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DJANGO_SECRET_KEY=dev_secret_key_change_in_production
+      - DJANGO_SECRET_KEY=django-serate-key-for-this-project
+      - DEBUG=1
     
